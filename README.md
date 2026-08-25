@@ -12,7 +12,7 @@
 
 [![Workshop](https://img.shields.io/badge/CoRL_2026-Workshop-0f172a?style=for-the-badge)](https://robofinemani2026.github.io/index.html)
 [![Competition](https://img.shields.io/badge/Open_Competition-Guide-2563eb?style=for-the-badge)](COMPETITION.md)
-[![Competition Dataset]([https://img.shields.io/badge/🤗_HuggingFace-Dataset-ffc107?style=for-the-badge)](https://huggingface.co/datasets/hiangx/MetaFine](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26))
+[![Competition Dataset](https://img.shields.io/badge/🤗_HuggingFace-Dataset-ffc107?style=for-the-badge)](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26)
 
 
 [![ModelScope](https://img.shields.io/badge/ModelScope-Dataset-624aff?style=for-the-badge&logo=alibabacloud&logoColor=white)](https://www.modelscope.cn/datasets/hiangx/MetaFine)
