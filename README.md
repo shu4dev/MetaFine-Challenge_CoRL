@@ -15,8 +15,7 @@
 [![Competition Dataset](https://img.shields.io/badge/🤗_HuggingFace-Dataset-ffc107?style=for-the-badge)](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26)
 
 
-[![ModelScope](https://img.shields.io/badge/ModelScope-Dataset-624aff?style=for-the-badge&logo=alibabacloud&logoColor=white)](https://www.modelscope.cn/datasets/hiangx/MetaFine)
-[![HuggingFace](https://img.shields.io/badge/🤗_HuggingFace-Dataset-ffc107?style=for-the-badge)](https://huggingface.co/datasets/hiangx/MetaFine)
+
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![SAPIEN](https://img.shields.io/badge/SAPIEN-3.0+-26c0e0?style=flat-square)](https://sapien.ucsd.edu/)
 [![ManiSkill](https://img.shields.io/badge/ManiSkill-3.0+-4caf50?style=flat-square)](https://github.com/haosulab/ManiSkill)
