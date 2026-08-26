@@ -16,4 +16,3 @@ grasp_part/
     lerobot/                                             # merged cap+body (n200) for training
 ```
 
-Legacy path `demos/CoRL/lerobot/grasp_part_*` is a symlink into this tree.

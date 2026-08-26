@@ -1,13 +1,14 @@
 # CoRL demos
 
-Training data for the MetaFine π0 baseline (T1–T5).
+Training data for the MetaFine competition tasks (T1–T5).
 
-**This repository ships READMEs only.** Download the full demo trees from:
+**This repository ships READMEs only.** Download the full demo trees from Hugging Face ([`hiangx/MetaFine_CoRL26`](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26)):
 
-- ModelScope: `modelscope download --dataset hiangx/MetaFine`
-- Hugging Face: `huggingface-cli download hiangx/MetaFine --repo-type dataset`
+```bash
+huggingface-cli download hiangx/MetaFine_CoRL26 --repo-type dataset --local-dir demos/CoRL
+```
 
-Unpack so paths match the layout below (under `demos/CoRL/`). See [COMPETITION.md](../../COMPETITION.md).
+Paths then match the layout below. See [COMPETITION.md](../../COMPETITION.md).
 
 ## Overview
 
@@ -21,20 +22,6 @@ Unpack so paths match the layout below (under `demos/CoRL/`). See [COMPETITION.m
 
 Per-variant episode counts: T1 `cap`/`body` = 100 each; T2 `left`/`right`/`forward` = 100 each; T3 `red`/`blue` = 100 each; T4 `red`/`blue`/`green` = 100 each; T5 `C`/`o`/`R`/`L` = 100 each (mixed merges them).
 
-## Checkpoint mapping
-
-Download π0 30k-step checkpoints separately (not in git). Expected paths after download:
-
-| LeRobot dataset | Checkpoint directory |
-|---|---|
-| `grasp_part/mixed/lerobot` | `checkpoints/pi0_grasp_mixed/checkpoints/030000/pretrained_model` |
-| `grasp_move_mug/mixed/lerobot` | `checkpoints/pi0_grasp_move_mug_mixed/checkpoints/030000/pretrained_model` |
-| `toggle_switch_table/mixed/lerobot` | `checkpoints/pi0_toggle_mixed/checkpoints/030000/pretrained_model` |
-| `put_blocks_into_boxes/mixed/lerobot` | `checkpoints/pi0_put_blocks_mixed/checkpoints/030000/pretrained_model` |
-| `insert_letter/mixed/lerobot` | `checkpoints/pi0_insert_letter_mixed/checkpoints/030000/pretrained_model` |
-
-URLs announced on the competition homepage when published.
-
 ## Layout
 
 ```
@@ -44,10 +31,6 @@ demos/CoRL/
   toggle_switch_table/        # see toggle_switch_table/README.md (T3)
   put_blocks_into_boxes/      # see put_blocks_into_boxes/README.md (T4)
   insert_letter/              # see insert_letter/README.md (T5)
-  lerobot/                    # legacy symlinks into the trees above
-    grasp_part_cap_n100_f70   → ../grasp_part/cap/lerobot
-    grasp_part_body_n100_f70  → ../grasp_part/body/lerobot
-    grasp_part_mixed_n200_f70 → ../grasp_part/mixed/lerobot
 ```
 
 Each variant folder typically holds:
