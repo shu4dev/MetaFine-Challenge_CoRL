@@ -103,14 +103,14 @@ Baseline reports ship under `eval_runs/*/metafine_report.json`.
 | OS | Linux (Ubuntu 20.04 / 22.04 tested) |
 | GPU | NVIDIA, ≥ 8 GB VRAM (CUDA 11.8 or 12.x) |
 | Python | 3.10 or 3.11 |
-| Disk | ~50 MB code + competition assets; demos & checkpoints downloaded separately |
+| Disk | ~50 MB code + competition assets; training demos downloaded separately |
 
 ```bash
 conda create -n metafine python=3.10 -y
 conda activate metafine
 
-git clone https://github.com/aatt523/MetaFine.git
-cd MetaFine
+git clone https://github.com/Hiangx-robotics/MetaFine-Challenge_CoRL.git
+cd MetaFine-Challenge_CoRL
 pip install -e .
 pip install -e ".[pi0]"   # LeRobot + π0 train/eval
 ```
@@ -124,19 +124,17 @@ python -c "import core.env, core.skill; import gymnasium as gym; \
 # → Ready: GraspPartEnv
 ```
 
-This release ships the competition assets (`assets/3558`, `8848`, `100920`, `table.glb`). Training demos and checkpoints are **not** in git — download from ModelScope / Hugging Face (`hiangx/MetaFine`); see [demos/CoRL/README.md](demos/CoRL/README.md).
+This release ships the competition assets (`assets/3558`, `8848`, `100920`, `table.glb`). Training demos are **not** in git — download from Hugging Face ([`hiangx/MetaFine_CoRL26`](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26)); see [demos/CoRL/README.md](demos/CoRL/README.md).
 
 ---
 
 ## Quickstart
 
-### 1. Download demos (TBD)
+### 1. Download demos
 ```bash
-# either mirror
-modelscope download --dataset hiangx/MetaFine
-# or: huggingface-cli download hiangx/MetaFine --repo-type dataset
+huggingface-cli download hiangx/MetaFine_CoRL26 --repo-type dataset --local-dir demos/CoRL
 
-# unpack so paths look like:
+# paths then look like:
 #   demos/CoRL/grasp_part/mixed/lerobot/
 #   demos/CoRL/grasp_move_mug/mixed/lerobot/
 #   ...
@@ -161,8 +159,6 @@ lerobot-train \
   --policy.dtype=bfloat16 \
   --rename_map='{"observation.images.base_camera":"observation.images.camera0","observation.images.hand_camera":"observation.images.camera1"}'
 ```
-
-Checkpoint mapping for all five tasks: [demos/CoRL/README.md](demos/CoRL/README.md).
 
 ### 3. Evaluate (local dev seeds)
 
