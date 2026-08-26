@@ -99,7 +99,7 @@ While grasping, only tilt (> 30°) counts as disturbance (lifting is allowed). W
 | T1 `grasp_part` | **0.296** | 0.233 / 0.358 | 0.25 | 0.35 | 0.35 |
 | T2 `grasp_move_mug` | **0.892** | 0.825 / 0.958 | 1.00 | 0.95 | 0.95 |
 | T3 `toggle_switch_table` | **0.346** | 0.292 / 0.400 | 0.40 | 0.60 | 0.60 |
-| T4 `put_blocks_into_boxes` | **0.192** | 0.150 / 0.233 | 0.25 | 0.35 | 0.35 (mean stage 0.45) |
+| T4 `put_blocks_into_boxes` | **0.192** | 0.150 / 0.233 | 0.25 | 0.35 | 0.45 (mean stage progress) |
 | T5 `insert_letter` | **0.025** | 0.033 / 0.017 | 0.10 | 0.05 | 0.05 |
 
 Source: `eval_runs/*/metafine_report.json` (seed-free baseline reports shipped with this repo).
