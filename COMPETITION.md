@@ -2,6 +2,8 @@
 
 This document describes the **public competition release** of MetaFine: five manipulation tasks (T1–T5), the evaluation protocol, and what is (and is not) included in this repository.
 
+> 🏆 **Registration, key dates, and announcements** live on the [competition page](https://robofinemani2026.github.io/competition.html). Register there first — this document covers the technical side only.
+
 ## Tasks (T1–T5)
 
 | ID | Env | Instruction variants | Stages |
@@ -89,7 +91,7 @@ python -m eval.eval_grasp_part \
 
 ## Submission
 
-Final submission format and upload portal will be announced on the [competition homepage](https://robofinemani2026.github.io/index.html). Expected deliverables:
+Final submission format and upload portal will be announced on the [competition page](https://robofinemani2026.github.io/competition.html). Expected deliverables:
 
 - Trained policy checkpoint(s) per task or a single multi-task checkpoint.
 - Optional: self-reported local eval logs on **your own** dev seeds (not used for official ranking).

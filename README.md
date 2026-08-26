@@ -11,6 +11,7 @@
 *Beyond Binary Success: Diagnosing Fine-Grained Capabilities in Robot Manipulation*
 
 [![Workshop](https://img.shields.io/badge/CoRL_2026-Workshop-0f172a?style=for-the-badge)](https://robofinemani2026.github.io/index.html)
+[![Register](https://img.shields.io/badge/🏆_Register-Competition_Page-e11d48?style=for-the-badge)](https://robofinemani2026.github.io/competition.html)
 [![Competition](https://img.shields.io/badge/Open_Competition-Guide-2563eb?style=for-the-badge)](COMPETITION.md)
 [![Competition Dataset](https://img.shields.io/badge/🤗_HuggingFace-Dataset-ffc107?style=for-the-badge)](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26)
 
@@ -29,7 +30,8 @@ This repository is the **public codebase for the MetaFine Open Competition**, he
 
 MetaFine decomposes competence into three orthogonal dimensions — **understanding**, **perception**, and **behavior** — so that failures can be attributed to instruction following, sensory robustness, or control quality. The competition release ships five fine-grained tasks (T1–T5), the evaluation harness, a π0 baseline, and the asset bundle needed to reproduce local diagnostics.
 
-> 🌐 **Workshop homepage** — schedule, call for papers, and competition announcements: [robofinemani2026.github.io](https://robofinemani2026.github.io/index.html)  
+> 🏆 **Register to participate** — competition info, registration form, and announcements: [robofinemani2026.github.io/competition.html](https://robofinemani2026.github.io/competition.html)  
+> 🌐 **Workshop homepage** — schedule and call for papers: [robofinemani2026.github.io](https://robofinemani2026.github.io/index.html)  
 > 📖 **MetaFine main page** — framework overview and docs: [metafine.github.io](https://metafine.github.io/)  
 > 🏁 **Participant guide** — tasks, protocol, seeds policy, submission: [COMPETITION.md](COMPETITION.md)
 
