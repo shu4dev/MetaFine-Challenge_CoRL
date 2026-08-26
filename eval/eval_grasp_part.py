@@ -51,6 +51,7 @@ from utils.eval_common import (
     build_perception_profiles,
     dump_json,
     load_pi0_policy,
+    load_remote_policy,
     load_seed_list,
     load_task_config,
     obs_to_frame,
@@ -508,7 +509,36 @@ def run_understanding(
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--config", default=DEFAULT_CONFIG)
-    p.add_argument("--policy-path", required=True)
+    p.add_argument(
+        "--policy-path",
+        default=None,
+        help="π0 checkpoint to load in-process (mutually exclusive with --policy-url)",
+    )
+    p.add_argument(
+        "--policy-url",
+        default=None,
+        help="Drive a submission policy server over HTTP instead of loading a "
+             "checkpoint, e.g. http://127.0.0.1:8080",
+    )
+    p.add_argument(
+        "--action-dim",
+        type=int,
+        default=8,
+        help="action_dim announced to the policy server on /reset",
+    )
+    p.add_argument(
+        "--policy-timeout",
+        type=float,
+        default=120.0,
+        help="Per-request timeout for --policy-url, seconds",
+    )
+    p.add_argument(
+        "--torch-seed",
+        type=int,
+        default=None,
+        help="Seed the torch RNG once at startup. Only needed to make a run "
+             "reproducible for harness parity checks; leave unset for scoring.",
+    )
     p.add_argument("--seeds", required=True, help="JSON from select_eval_seeds.py")
     p.add_argument("--mode", choices=["perception", "understanding", "both"], default="both")
     p.add_argument("--device", default="cuda")
@@ -530,6 +560,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if bool(args.policy_path) == bool(args.policy_url):
+        raise SystemExit("pass exactly one of --policy-path / --policy-url")
     cfg = load_task_config(args.config)
     seeds = load_seed_list(args.seeds)
     if args.n_seeds is not None:
@@ -542,15 +574,30 @@ def main() -> None:
         perc_profiles = [s.strip() for s in args.perception_profiles.split(",") if s.strip()]
 
     print(f"config={args.config}")
-    print(f"policy={args.policy_path}")
+    print(f"policy={args.policy_url or args.policy_path}")
     print(f"seeds={len(seeds)} from {args.seeds}")
     print(f"sensor={cfg.get('sensor')}")
     print(f"save_video={args.save_video} video_fps={args.video_fps}")
     print(f"perception_profiles={perc_profiles or 'ALL'}")
 
-    policy, preprocessor, postprocessor = load_pi0_policy(
-        args.policy_path, device=args.device, tokenizer_path=args.tokenizer_path,
-    )
+    if args.policy_url:
+        policy, preprocessor, postprocessor = load_remote_policy(
+            args.policy_url,
+            cfg.get("task_id"),
+            action_dim=args.action_dim,
+            timeout=args.policy_timeout,
+        )
+    else:
+        policy, preprocessor, postprocessor = load_pi0_policy(
+            args.policy_path, device=args.device, tokenizer_path=args.tokenizer_path,
+        )
+
+    # Seed *after* loading: from_pretrained draws from the RNG, so seeding
+    # first would leave the stream at a load-dependent offset.
+    if args.torch_seed is not None:
+        import torch
+
+        torch.manual_seed(int(args.torch_seed))
 
     results = {"task_id": cfg.get("task_id"), "seeds_file": str(resolve_path(args.seeds))}
     if args.mode in ("perception", "both"):

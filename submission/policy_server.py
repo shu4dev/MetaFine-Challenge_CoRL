@@ -91,7 +91,9 @@ class Policy:
 # --------------------------------------------------------------------------- #
 
 def _decode_image(spec: dict) -> np.ndarray:
-    raw = base64.b64decode(spec["data"])
+    # bytearray (not bytes) so the array is writable — torch.from_numpy warns
+    # loudly on read-only buffers.
+    raw = bytearray(base64.b64decode(spec["data"]))
     return np.frombuffer(raw, dtype=np.dtype(spec["dtype"])).reshape(spec["shape"])
 
 
@@ -145,10 +147,10 @@ class _Handler(BaseHTTPRequestHandler):
             self._reply(500, {"error": f"{type(exc).__name__}: {exc}"})
 
 
-def serve(port: int) -> None:
-    _Handler.policy = Policy()
+def serve(port: int, policy: "Policy | None" = None) -> None:
+    _Handler.policy = policy if policy is not None else Policy()
     httpd = ThreadingHTTPServer(("0.0.0.0", port), _Handler)
-    print(f"[policy_server] {_Handler.policy.name} listening on :{port}")
+    print(f"[policy_server] {_Handler.policy.name} listening on :{port}", flush=True)
     httpd.serve_forever()
 
 
@@ -164,12 +166,23 @@ class PolicyClient:
         self.timeout = timeout
 
     def _post(self, path: str, obj: dict) -> dict:
+        import urllib.error
         import urllib.request
         req = urllib.request.Request(
             self.base_url + path, data=json.dumps(obj).encode(),
             headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            out = json.loads(resp.read())
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                out = json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            # The handler puts the real traceback message in the body; without
+            # this the caller only ever sees "HTTP Error 500".
+            try:
+                detail = json.loads(exc.read()).get("error", "")
+            except Exception:
+                detail = ""
+            raise RuntimeError(
+                f"policy server error on {path}: {detail or exc}") from None
         if "error" in out:
             raise RuntimeError(f"policy server error on {path}: {out['error']}")
         return out
@@ -193,9 +206,9 @@ class PolicyClient:
         return np.asarray(out["action"], dtype=np.float32)
 
 
-def self_test(port: int) -> None:
+def self_test(port: int, policy: "Policy | None" = None) -> None:
     """Spin up the server in-process and drive one fake episode against it."""
-    _Handler.policy = Policy()
+    _Handler.policy = policy if policy is not None else Policy()
     httpd = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()

@@ -261,27 +261,39 @@ def load_pi0_policy(
     return policy, preprocessor, postprocessor
 
 
-def maniskill_obs_to_batch(obs: dict, task: str) -> dict:
-    """Map ManiSkill rgb obs → LeRobot PI0 batch (pre-rename camera keys)."""
+def build_pi0_batch(state: Any, images: dict, task: str) -> dict:
+    """Build a LeRobot PI0 batch from raw qpos + uint8 HWC camera frames.
+
+    Split out of :func:`maniskill_obs_to_batch` so the in-process path and the
+    policy-server path (``submission/pi0_policy_server.py``) construct byte
+    identical batches.
+    """
     from lerobot.utils.constants import OBS_IMAGES, OBS_STATE
 
-    qpos = obs["agent"]["qpos"]
-    if isinstance(qpos, torch.Tensor):
-        qpos = qpos.detach().cpu()
-    state = torch.as_tensor(np.asarray(qpos, dtype=np.float32))
+    if isinstance(state, torch.Tensor):
+        state = state.detach().cpu()
+    state_t = torch.as_tensor(np.asarray(state, dtype=np.float32))
 
-    images: dict[str, torch.Tensor] = {}
-    for cam_name in ("base_camera", "hand_camera"):
-        rgb = obs["sensor_data"][cam_name]["rgb"]
+    image_batch: dict[str, torch.Tensor] = {}
+    for cam_name, rgb in images.items():
         if isinstance(rgb, torch.Tensor):
             rgb = rgb.detach().cpu()
         rgb_np = np.asarray(rgb, dtype=np.uint8)
         if rgb_np.ndim == 3:
             rgb_np = rgb_np[np.newaxis]
         img_t = torch.from_numpy(rgb_np).permute(0, 3, 1, 2).contiguous().float() / 255.0
-        images[f"{OBS_IMAGES}.{cam_name}"] = img_t
+        image_batch[f"{OBS_IMAGES}.{cam_name}"] = img_t
 
-    return {OBS_STATE: state, "task": task, **images}
+    return {OBS_STATE: state_t, "task": task, **image_batch}
+
+
+def maniskill_obs_to_batch(obs: dict, task: str) -> dict:
+    """Map ManiSkill rgb obs → LeRobot PI0 batch (pre-rename camera keys)."""
+    images = {
+        cam_name: obs["sensor_data"][cam_name]["rgb"]
+        for cam_name in ("base_camera", "hand_camera")
+    }
+    return build_pi0_batch(obs["agent"]["qpos"], images, task)
 
 
 def adapt_action(action: np.ndarray, env_dim: int, default_last: float = 0.0) -> np.ndarray:
@@ -295,6 +307,113 @@ def adapt_action(action: np.ndarray, env_dim: int, default_last: float = 0.0) ->
     if policy_dim > env_dim:
         return action[..., :env_dim]
     raise ValueError(f"action dim mismatch: policy={policy_dim}, env={env_dim}")
+
+
+# --------------------------------------------------------------------------- #
+# Remote policy (participant submission server)                               #
+# --------------------------------------------------------------------------- #
+
+class RemotePolicy:
+    """Drive a participant ``policy_server.py`` over HTTP from ``run_episode``.
+
+    Duck-types the ``policy`` half of the ``(policy, preprocessor,
+    postprocessor)`` triple, so ``run_episode`` is untouched: pair it with
+    identity pre/post processors via :func:`load_remote_policy`.
+
+    ``run_episode`` calls ``policy.reset()`` with no arguments, but the wire
+    protocol needs the episode instruction. The instruction is already in the
+    batch (``run_episode`` passes it as ``task``), so ``reset`` only arms a
+    flag and the ``/reset`` call is deferred to the first ``select_action``.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        task_id: str,
+        *,
+        action_dim: int = 8,
+        timeout: float = 120.0,
+    ) -> None:
+        from submission.policy_server import PolicyClient
+
+        self.client = PolicyClient(base_url, timeout=timeout)
+        self.task_id = str(task_id)
+        self.action_dim = int(action_dim)
+        self._pending_reset = True
+        self._step = 0
+        self._warned_dim = False
+
+    def reset(self) -> None:
+        self._pending_reset = True
+        self._step = 0
+
+    @staticmethod
+    def _split_batch(batch: dict) -> tuple[np.ndarray, dict, str]:
+        """Undo :func:`build_pi0_batch` back to wire types (uint8 HWC images)."""
+        from lerobot.utils.constants import OBS_IMAGES, OBS_STATE
+
+        state = batch[OBS_STATE]
+        if isinstance(state, torch.Tensor):
+            state = state.detach().cpu().numpy()
+        state = np.asarray(state, dtype=np.float32).reshape(-1)
+
+        prefix = f"{OBS_IMAGES}."
+        images: dict[str, np.ndarray] = {}
+        for key, value in batch.items():
+            if not (isinstance(key, str) and key.startswith(prefix)):
+                continue
+            img = value
+            if isinstance(img, torch.Tensor):
+                img = img.detach().cpu()
+            img_t = torch.as_tensor(img)
+            if img_t.ndim == 4:  # (1, C, H, W) → (C, H, W)
+                img_t = img_t[0]
+            # build_pi0_batch produced float [0, 1] CHW; recover uint8 HWC.
+            arr = img_t.permute(1, 2, 0).contiguous().float().mul(255.0).round()
+            images[key[len(prefix):]] = arr.clamp(0, 255).to(torch.uint8).numpy()
+
+        return state, images, str(batch.get("task", ""))
+
+    def select_action(self, batch: dict):
+        state, images, instruction = self._split_batch(batch)
+        if self._pending_reset:
+            self.client.reset(self.task_id, instruction, self.action_dim)
+            self._pending_reset = False
+        action = self.client.act(state, images, instruction, self._step)
+        action = np.asarray(action, dtype=np.float32).reshape(1, -1)
+        # A non-finite action would silently poison the simulator; fail loudly
+        # so the submission is reported as broken rather than as low-scoring.
+        if not np.all(np.isfinite(action)):
+            raise RuntimeError(
+                f"policy server returned a non-finite action at step "
+                f"{self._step}: {action.reshape(-1).tolist()}")
+        if action.shape[-1] != self.action_dim and not self._warned_dim:
+            # adapt_action will pad or TRUNCATE silently; say so once, or a
+            # submission returning the wrong width just looks like a bad policy.
+            self._warned_dim = True
+            print(f"[remote] WARNING: server returned action_dim="
+                  f"{action.shape[-1]}, announced {self.action_dim}; "
+                  f"it will be padded/truncated to the env action space")
+        self._step += 1
+        return action
+
+
+def _identity(x):
+    return x
+
+
+def load_remote_policy(
+    base_url: str,
+    task_id: str,
+    *,
+    action_dim: int = 8,
+    timeout: float = 120.0,
+):
+    """``load_pi0_policy``-shaped loader backed by a policy server."""
+    policy = RemotePolicy(base_url, task_id, action_dim=action_dim, timeout=timeout)
+    info = policy.client.health()
+    print(f"[remote] {base_url} healthy — policy: {info.get('name', '?')}")
+    return policy, _identity, _identity
 
 
 def _extract_success(info: Any) -> bool:
