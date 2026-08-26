@@ -239,10 +239,11 @@ python -m utils.eval_report --task-id grasp_part \
 
 Useful flags on the T1–T5 eval scripts:
 
-- `--save-video` — write side-by-side RGB mp4s under `<record-dir>/videos/`
-- `--perception-profiles clean,cam_l1,...` — subset of DR profiles (default: all)
-- `--n-seeds N` — use only the first N seeds (smoke)
-- `--tokenizer-path PATH` — local PaliGemma tokenizer dir (only needed on machines without Hugging Face access; defaults to downloading from the Hub)
+- `--n-seeds N` — use only the first N seeds (smoke); all tasks
+- `--tokenizer-path PATH` — local PaliGemma tokenizer dir (only needed on machines without Hugging Face access; defaults to downloading from the Hub); all tasks
+- `--save-video` — write RGB mp4s under `<record-dir>/videos/`; T1 / T2 / T3 / T5 (not T4)
+- `--max-videos N` — cap saved videos per sweep; T2 / T5 only
+- `--perception-profiles clean,cam_l1,...` — subset of DR profiles (default: all); T1 / T3 only
 
 ---
 
