@@ -25,7 +25,6 @@ Numbered T1–T5 in table order.
 | Variants | `cap` → *"Grasp the cap of the bottle"*; `body` → *"Grasp the body of the bottle"* |
 | Horizon | 300 steps |
 | Sensor | 512×512, FOV ≈ 70°, `pd_joint_delta_pos`, `obs_mode=rgb` |
-| Checkpoint | Download from competition model hub (see [COMPETITION.md](COMPETITION.md)) |
 | Seeds (local dev) | Generate with `select_eval_seeds.py` — **not** the hidden competition set |
 
 ### T2 — `grasp_move_mug`
@@ -37,7 +36,6 @@ Numbered T1–T5 in table order.
 | Variants | `left` / `right` / `forward` |
 | Horizon | 400 steps |
 | Sensor | 512×512, FOV ≈ 70°, `pd_joint_delta_pos`, `obs_mode=rgb` |
-| Checkpoint | Download from competition model hub (see [COMPETITION.md](COMPETITION.md)) |
 | Seeds (local dev) | Generate with `select_eval_seeds.py` — **not** the hidden competition set |
 
 ### T3 — `toggle_switch_table`
@@ -49,7 +47,6 @@ Numbered T1–T5 in table order.
 | Variants | `red` / `blue` (specific color in the instruction) |
 | Horizon | from env / eval config |
 | Sensor | 512×512, FOV ≈ 70°, `pd_joint_delta_pos`, `obs_mode=rgb` |
-| Checkpoint | Download from competition model hub (see [COMPETITION.md](COMPETITION.md)) |
 | Seeds (local dev) | Generate with `select_eval_seeds.py` — **not** the hidden competition set |
 
 ### T4 — `put_blocks_into_boxes`
@@ -61,7 +58,6 @@ Numbered T1–T5 in table order.
 | Variants | `red` / `blue` / `green` (special cube color in the instruction) |
 | Horizon | 800 steps |
 | Sensor | 512×512, FOV ≈ 57°, `pd_joint_delta_pos`, `obs_mode=rgb` |
-| Checkpoint | Download from competition model hub (see [COMPETITION.md](COMPETITION.md)) |
 | Seeds (local dev) | Generate with `select_eval_seeds.py` — **not** the hidden competition set |
 
 ### T5 — `insert_letter`
@@ -73,10 +69,9 @@ Numbered T1–T5 in table order.
 | Variants | `C` / `o` / `R` / `L` |
 | Horizon | 400 steps |
 | Sensor | 512×512, FOV ≈ 70°, `pd_joint_delta_pos`, `obs_mode=rgb` |
-| Checkpoint | Download from competition model hub (see [COMPETITION.md](COMPETITION.md)) |
 | Seeds (local dev) | Generate with `select_eval_seeds.py` — **not** the hidden competition set |
 
-T4 success uses `_is_in_box` + `agent.is_grasping` (never used the gripper-band heuristic). T1 scores below are under the **strict contact criterion**. T2 policy eval uses `grasped_contact_fallback` (off by default for every other task).
+T4 success uses `_is_in_box` + `agent.is_grasping`. T1 scores below are under the **strict contact criterion**. T2 policy eval uses `grasped_contact_fallback` (off by default for every other task).
 
 ---
 
@@ -93,22 +88,11 @@ success = is_grasping(link)                      # agent.is_grasping — true co
 
 While grasping, only tilt (> 30°) counts as disturbance (lifting is allowed). When not grasping, both tilt and XY displacement (> 5 cm) gate success — so knocking the bottle over without holding it cannot pass.
 
-### Why the old criterion was wrong
-
-The previous heuristic treated a gripper joint angle in `[0.01, 0.03]` as success (partially closed). Waving near the bottle was enough. Diagnostic run (`eval_runs/grasp_part_diagnostic`):
-
-| | Reported SR | True contact SR | False-positive rate |
-|---|---|---|---|
-| Perception clean | 20/20 = 1.00 | 0/20 = 0.00 | — |
-| Understanding | 0.95 | 0.075 (3/38 “successes”) | **92%** |
-
-Legacy numbers are kept under `eval_runs/grasp_part_legacy_gripper_band/` (+ diagnostic JSONs). Side-by-side: `eval_runs/grasp_part_strict/compare_old_vs_strict.json`.
-
 ---
 
 ## π0 baseline scores
 
-30k-step checkpoints · 20 seeds · strict criterion for T1.
+π0 trained 30k steps per task · 20 seeds · strict criterion for T1.
 
 | Task | Perc. AUSC (mean) | cam / light | Clean SR | Understanding | Behavior |
 |---|---|---|---|---|---|
@@ -185,20 +169,7 @@ Per-variant SR: C 0.05, o 0.05, R 0.10, L 0.00.
 
 ## Reproduce locally
 
-Pin Vulkan to the NVIDIA ICD (avoids Mesa/Intel ICD races → `ErrorDeviceLost`):
-
-```bash
-export VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json
-export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1
-```
-
-Offline PaliGemma tokenizer (optional — only if your cluster has no Hugging Face egress):
-
-```bash
-export HF_HOME="$HOME/.cache/huggingface"
-export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
-TOK="$HF_HOME/hub/models--google--paligemma-3b-pt-224/snapshots/<revision>"
-```
+> **Troubleshooting:** if SAPIEN crashes with `ErrorDeviceLost` on a machine with more than one Vulkan driver, pin the NVIDIA ICD first: `export VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json`.
 
 ### 1) Local dev seeds (not the competition hidden set)
 
@@ -225,39 +196,35 @@ python -m eval.select_eval_seeds --config eval/configs/insert_letter.yaml \
 
 Training demos must be present under `demos/CoRL/` (download separately — see [COMPETITION.md](COMPETITION.md)).
 
-### 2) Roll out π0 on all five tasks
+### 2) Roll out your trained policy on all five tasks
+
+Point `--policy-path` at your own training output (e.g. `outputs/…` from the `lerobot-train` recipe in the top-level [README](../README.md)):
 
 ```bash
-CKPT=/path/to/pi0_grasp_mixed/checkpoints/030000/pretrained_model
-
 CUDA_VISIBLE_DEVICES=0 python -m eval.eval_grasp_part \
-  --policy-path "$CKPT" --seeds /tmp/grasp_part_dev.json \
-  --mode both --record-dir eval_runs/grasp_part \
-  --tokenizer-path "$TOK"
+  --policy-path outputs/pi0_grasp_mixed/checkpoints/030000/pretrained_model \
+  --seeds /tmp/grasp_part_dev.json \
+  --mode both --record-dir eval_runs/grasp_part
 
 CUDA_VISIBLE_DEVICES=0 python -m eval.eval_grasp_move_mug \
-  --policy-path /path/to/pi0_grasp_move_mug_mixed/checkpoints/030000/pretrained_model \
+  --policy-path outputs/pi0_grasp_move_mug_mixed/checkpoints/030000/pretrained_model \
   --seeds /tmp/grasp_move_mug_dev.json \
-  --mode both --record-dir eval_runs/grasp_move_mug \
-  --tokenizer-path "$TOK"
+  --mode both --record-dir eval_runs/grasp_move_mug
 
 CUDA_VISIBLE_DEVICES=0 python -m eval.eval_toggle_switch \
-  --policy-path /path/to/pi0_toggle_mixed/checkpoints/030000/pretrained_model \
+  --policy-path outputs/pi0_toggle_mixed/checkpoints/030000/pretrained_model \
   --seeds /tmp/toggle_dev.json \
-  --mode both --record-dir eval_runs/toggle_switch_table \
-  --tokenizer-path "$TOK"
+  --mode both --record-dir eval_runs/toggle_switch_table
 
 CUDA_VISIBLE_DEVICES=0 python -m eval.eval_put_blocks \
-  --policy-path /path/to/pi0_put_blocks_mixed/checkpoints/030000/pretrained_model \
+  --policy-path outputs/pi0_put_blocks_mixed/checkpoints/030000/pretrained_model \
   --seeds /tmp/put_blocks_dev.json \
-  --mode both --record-dir eval_runs/put_blocks_into_boxes \
-  --tokenizer-path "$TOK"
+  --mode both --record-dir eval_runs/put_blocks_into_boxes
 
 CUDA_VISIBLE_DEVICES=0 python -m eval.eval_insert_letter \
-  --policy-path /path/to/pi0_insert_letter_mixed/checkpoints/030000/pretrained_model \
+  --policy-path outputs/pi0_insert_letter_mixed/checkpoints/030000/pretrained_model \
   --seeds /tmp/insert_letter_dev.json \
-  --mode both --record-dir eval_runs/insert_letter \
-  --tokenizer-path "$TOK"
+  --mode both --record-dir eval_runs/insert_letter
 ```
 
 ### 3) Aggregate → `metafine_report.json`
@@ -275,6 +242,7 @@ Useful flags on the T1–T5 eval scripts:
 - `--save-video` — write side-by-side RGB mp4s under `<record-dir>/videos/`
 - `--perception-profiles clean,cam_l1,...` — subset of DR profiles (default: all)
 - `--n-seeds N` — use only the first N seeds (smoke)
+- `--tokenizer-path PATH` — local PaliGemma tokenizer dir (only needed on machines without Hugging Face access; defaults to downloading from the Hub)
 
 ---
 
@@ -314,20 +282,6 @@ eval_runs/
 ```
 
 When you run eval locally, each task also writes `perception_summary.json` and `understanding_summary.json` under your `--record-dir`. Use `utils/eval_report.py` to produce `metafine_report.json`.
-
-### Video filename fields
-
-`seed295528_succ1_contact1_len053.mp4` (Understanding) or `seed295528_cap_succ1_contact1_len052.mp4` (Perception):
-
-| Token | Meaning |
-|---|---|
-| `seedNNNNNN` | Scene seed |
-| `cap` / `body` | Perception variant (Understanding puts the variant in the parent folder) |
-| `succ0/1` | Final `evaluate()["success"]` |
-| `contact0/1` | Whether `agent.is_grasping` was ever true |
-| `lenNNN` | Episode length in steps |
-
-Under the strict criterion, `succ1` implies `contact1`. A legacy `succ1_contact0` clip was a false positive.
 
 ---
 
