@@ -30,9 +30,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "numpy>=1.24",
+    "numpy>=1.24,<2",
     "scipy>=1.10",
-    "torch>=2.0",
+    "torch>=2.6",
     "gymnasium>=0.29",
     "sapien>=3.0.0",
     "mani_skill>=3.0.0b0",
@@ -44,7 +44,7 @@ dependencies = [
     "transforms3d>=0.4",
     "opencv-python>=4.7",
     "pyyaml>=6.0",
-    "transformers>=4.40",
+    "transformers>=4.57,<4.58",
     "Pillow>=9.0",
 ]
 
@@ -57,7 +57,7 @@ dependencies = [
 [project.optional-dependencies]
 ai = ["openai>=1.0"]
 dev = ["pytest>=7.0"]
-pi0 = ["lerobot>=0.1.0"]
+pi0 = ["lerobot>=0.4.4,<0.5"]
 rlds = ["tensorflow>=2.14", "tensorflow-datasets>=4.9"]
 
 # Two top-level Python packages: `core` (envs / skills / scenes) and `utils`

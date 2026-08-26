@@ -75,7 +75,7 @@ Your locally generated seeds **will not** match the official hidden set. This is
 
 ```bash
 pip install -e .
-pip install lerobot   # π0 eval dependency
+pip install -e ".[pi0]"   # pinned lerobot for π0 train/eval — do not install lerobot manually
 
 python -m eval.select_eval_seeds \
   --config eval/configs/grasp_part.yaml \

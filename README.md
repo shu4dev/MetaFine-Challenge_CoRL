@@ -117,6 +117,8 @@ pip install -e .
 pip install -e ".[pi0]"   # LeRobot + π0 train/eval
 ```
 
+> ⚠️ **Version pins matter.** The baseline was trained and evaluated with **Python 3.10 · torch 2.6 (cu124) · lerobot 0.4.4 · transformers 4.57.0 · sapien 3.0.3 · mani_skill 3.0.1 · numpy 1.26.4**. `pyproject.toml` pins the critical ones (`lerobot>=0.4.4,<0.5`, `transformers>=4.57,<4.58`, `numpy<2`) — install through it rather than ad-hoc `pip install`, and match the reference versions above if anything misbehaves.
+
 Verify:
 
 ```bash
