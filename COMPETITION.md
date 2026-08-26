@@ -19,7 +19,7 @@ Full sensor settings, success criteria, and baseline scores: [eval/README.md](ev
 | Included | Not included |
 |---|---|
 | Simulation environments, skills, predicates | **Official eval seeds** |
-| `eval/` harness (Perception + Understanding + Behavior) | Training checkpoints (download separately) |
+| `eval/` harness (Perception + Understanding + Behavior) | Policy checkpoints (participants train their own) |
 | Competition assets (`3558`, `8848`, `100920`, `table.glb`) | Full CoRL demo HDF5 / LeRobot trees (download separately) |
 | Task-graph YAMLs for T2 | Internal cluster logs / operational scripts |
 | π0 baseline **reports** (`eval_runs/*/metafine_report.json`) | Evaluation videos from organizer runs |
@@ -28,31 +28,17 @@ Full sensor settings, success criteria, and baseline scores: [eval/README.md](ev
 
 ### Training data (CoRL mixed demos)
 
-Download from either mirror and unpack so paths match `demos/CoRL/` in this repo:
+Download from Hugging Face ([`hiangx/MetaFine_CoRL26`](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26)) so paths match `demos/CoRL/` in this repo:
 
-- ModelScope: `modelscope download --dataset hiangx/MetaFine`
-- Hugging Face: `huggingface-cli download hiangx/MetaFine --repo-type dataset`
+```bash
+huggingface-cli download hiangx/MetaFine_CoRL26 --repo-type dataset --local-dir demos/CoRL
+```
 
 See [demos/CoRL/README.md](demos/CoRL/README.md) for per-task layout.
 
-### Baseline checkpoints (π0, 30k steps)
-
-Host checkpoints outside git. Expected layout after download:
-
-```
-checkpoints/
-  pi0_grasp_mixed/checkpoints/030000/pretrained_model/
-  pi0_grasp_move_mug_mixed/checkpoints/030000/pretrained_model/
-  pi0_toggle_mixed/checkpoints/030000/pretrained_model/
-  pi0_put_blocks_mixed/checkpoints/030000/pretrained_model/
-  pi0_insert_letter_mixed/checkpoints/030000/pretrained_model/
-```
-
-URLs will be announced on the competition homepage when weights are published.
-
 ### Extended asset library
 
-The competition bundle ships only the three articulated assets used by T1–T3 plus the table mesh. The full 40+ PartNet-Mobility subset remains on the MetaFine dataset mirrors for platform exploration.
+The competition bundle ships only the three articulated assets used by T1–T3 plus the table mesh. The full 40+ PartNet-Mobility subset is part of the MetaFine platform release ([metafine.github.io](https://metafine.github.io/)) — not required for the competition.
 
 ## Evaluation protocol
 
@@ -101,25 +87,14 @@ python -m eval.eval_grasp_part \
   --record-dir /tmp/eval_smoke
 ```
 
-## Submission (TBD)
+## Submission
 
-Final submission format and upload portal will be announced on the competition homepage. Expected deliverables:
+Final submission format and upload portal will be announced on the [competition homepage](https://robofinemani2026.github.io/index.html). Expected deliverables:
 
-- Trained policy checkpoint(s) per task or a single multi-task checkpoint (TBD).
+- Trained policy checkpoint(s) per task or a single multi-task checkpoint.
 - Optional: self-reported local eval logs on **your own** dev seeds (not used for official ranking).
 
 Organizers re-run submitted checkpoints on the **hidden seed set** with the shipped `eval/eval_*.py` scripts.
-
-## Platform changes in this release
-
-Relative to MetaFine v0.1:
-
-- **T1 strict grasp criterion** — contact + correct `part_links` + 5-step hold (replaces gripper-angle heuristic).
-- **T2 `grasp_move_mug`** — `MultiSkillEnv` task graphs (`configs/t2_mug_move_*.yaml`); policy eval uses opt-in `grasped_contact_fallback`.
-- **T5 `insert_letter`** — procedural peg/board geometry in `core/letter_glyphs.py` (no URDF kit).
-- **`eval/` package** — standardized Perception / Understanding eval for all five tasks.
-- **`EvalDREnvMixin`** — camera/light DR hooks shared across eval envs.
-- **Predicate DSL** — `placed_in` / `stacked_on` are stubs (always false); do not use in competition task graphs.
 
 ## Experimental environments
 
@@ -129,4 +104,4 @@ The platform registers 20 Gym environments total. Only the five tasks above are 
 
 - Evaluation details: [eval/README.md](eval/README.md)
 - Data layout: [demos/CoRL/README.md](demos/CoRL/README.md)
-- Issues: project homepage / GitHub (TBD)
+- Issues: [GitHub Issues](https://github.com/Hiangx-robotics/MetaFine-Challenge_CoRL/issues)
