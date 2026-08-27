@@ -171,63 +171,67 @@ Per-variant SR: C 0.05, o 0.05, R 0.10, L 0.00.
 
 > **Troubleshooting:** if SAPIEN crashes with `ErrorDeviceLost` on a machine with more than one Vulkan driver, pin the NVIDIA ICD first: `export VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json`.
 
-### 1) Local dev seeds (not the competition hidden set)
+### 1) Implement your policy
 
-The repo ships **no** pre-selected eval seeds. Generate your own for smoke tests:
+Evaluation uses the unified `policy-server` interface. Customize `Policy` in `submission/policy_server.py`: load weights once in `__init__`, clear per-episode state in `reset`, and return one action from `act`. Leave the protocol plumbing unchanged.
+
+```python
+class Policy:
+    def __init__(self):
+        self.model = load_your_model(...)  # loaded once
+
+    def reset(self, task_id, instruction, action_dim):
+        ...  # clear action chunks / recurrent state
+
+    def act(self, state, images, instruction, step):
+        return action  # shape: (action_dim,)
+```
+
+See `submission/pi0_policy_server.py` for a complete runnable π0 example.
+
+### 2) Self-test the protocol
+
+This uses fake observations and finishes without launching the simulator:
 
 ```bash
-python -m eval.select_eval_seeds --config eval/configs/grasp_part.yaml \
-  --n-seeds 5 --rng-seed 42 --out /tmp/grasp_part_dev.json
+python submission/policy_server.py --self-test
+```
 
-python -m eval.select_eval_seeds --config eval/configs/grasp_move_mug.yaml \
-  --n-seeds 5 --rng-seed 42 --out /tmp/grasp_move_mug_dev.json
+### 3) Generate local dev seeds
 
+The official seed set is hidden. Generate your own seeds for debugging:
+
+```bash
 python -m eval.select_eval_seeds --config eval/configs/toggle_switch_table.yaml \
   --n-seeds 5 --rng-seed 42 --out /tmp/toggle_dev.json
-
-python -m eval.select_eval_seeds --config eval/configs/put_blocks_into_boxes.yaml \
-  --n-seeds 5 --rng-seed 42 --out /tmp/put_blocks_dev.json
-
-python -m eval.select_eval_seeds --config eval/configs/insert_letter.yaml \
-  --n-seeds 5 --rng-seed 42 --out /tmp/insert_letter_dev.json
 ```
 
-**Important:** `select_eval_seeds.py` is deterministic for a given `--rng-seed`. The competition organizers hold a **private** `--rng-seed` and never publish the resulting seed list. Your locally generated seeds will differ from the official hidden evaluation set.
+Use the matching YAML under `eval/configs/` for each task. Local dev seeds will not match the official set.
 
-Training demos must be present under `demos/CoRL/` (download separately — see [COMPETITION.md](COMPETITION.md)).
-
-### 2) Roll out your trained policy on all five tasks
-
-Point `--policy-path` at your own training output (e.g. `outputs/…` from the `lerobot-train` recipe in the top-level [README](../README.md)):
+### 4) Start a policy server
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python -m eval.eval_grasp_part \
-  --policy-path outputs/pi0_grasp_mixed/checkpoints/030000/pretrained_model \
-  --seeds /tmp/grasp_part_dev.json \
-  --mode both --record-dir eval_runs/grasp_part
+# Your implementation
+python submission/policy_server.py --port 8080 &
 
-CUDA_VISIBLE_DEVICES=0 python -m eval.eval_grasp_move_mug \
-  --policy-path outputs/pi0_grasp_move_mug_mixed/checkpoints/030000/pretrained_model \
-  --seeds /tmp/grasp_move_mug_dev.json \
-  --mode both --record-dir eval_runs/grasp_move_mug
-
-CUDA_VISIBLE_DEVICES=0 python -m eval.eval_toggle_switch \
-  --policy-path outputs/pi0_toggle_mixed/checkpoints/030000/pretrained_model \
-  --seeds /tmp/toggle_dev.json \
-  --mode both --record-dir eval_runs/toggle_switch_table
-
-CUDA_VISIBLE_DEVICES=0 python -m eval.eval_put_blocks \
-  --policy-path outputs/pi0_put_blocks_mixed/checkpoints/030000/pretrained_model \
-  --seeds /tmp/put_blocks_dev.json \
-  --mode both --record-dir eval_runs/put_blocks_into_boxes
-
-CUDA_VISIBLE_DEVICES=0 python -m eval.eval_insert_letter \
-  --policy-path outputs/pi0_insert_letter_mixed/checkpoints/030000/pretrained_model \
-  --seeds /tmp/insert_letter_dev.json \
-  --mode both --record-dir eval_runs/insert_letter
+# Or the complete π0 example
+python submission/pi0_policy_server.py --port 8080 \
+  --ckpt outputs/pi0_toggle_mixed/checkpoints/030000/pretrained_model \
+  --tokenizer-path /path/to/paligemma-3b-pt-224 &
 ```
 
-### 3) Aggregate → `metafine_report.json`
+### 5) Run evaluation
+
+```bash
+python -m eval.eval_toggle_switch \
+  --policy-url http://127.0.0.1:8080 \
+  --seeds /tmp/toggle_dev.json --mode both \
+  --record-dir eval_runs/toggle
+```
+
+Replace the module with `eval.eval_grasp_part`, `eval.eval_grasp_move_mug`, `eval.eval_put_blocks`, or `eval.eval_insert_letter` to run the other tasks. Add `--save-video` where supported; `put_blocks` videos require `tools/record_video.py`.
+
+### 6) Aggregate → `metafine_report.json`
 
 ```bash
 python -m utils.eval_report --task-id grasp_part \
@@ -240,7 +244,6 @@ python -m utils.eval_report --task-id grasp_part \
 Useful flags on the T1–T5 eval scripts:
 
 - `--n-seeds N` — use only the first N seeds (smoke); all tasks
-- `--tokenizer-path PATH` — local PaliGemma tokenizer dir (only needed on machines without Hugging Face access; defaults to downloading from the Hub); all tasks
 - `--save-video` — write RGB mp4s under `<record-dir>/videos/`; T1 / T2 / T3 / T5 (not T4)
 - `--max-videos N` — cap saved videos per sweep; T2 / T5 only
 - `--perception-profiles clean,cam_l1,...` — subset of DR profiles (default: all); T1 / T3 only

@@ -166,20 +166,47 @@ lerobot-train \
 
 ### 3. Evaluate (local dev seeds)
 
-Official competition seeds are **hidden**. Generate your own for debugging:
+Evaluation uses the unified `policy-server` interface. Customize `Policy` in `submission/policy_server.py`: load weights once in `__init__`, clear per-episode state in `reset`, and return one action from `act`. Leave the protocol plumbing unchanged.
 
-```bash
-python -m eval.select_eval_seeds --config eval/configs/grasp_part.yaml \
-  --n-seeds 5 --rng-seed 42 --out /tmp/grasp_part_dev.json
+```python
+class Policy:
+    def __init__(self):
+        self.model = load_your_model(...)  # loaded once
 
-CUDA_VISIBLE_DEVICES=0 python -m eval.eval_grasp_part \
-  --policy-path outputs/pi0_grasp_mixed/checkpoints/030000/pretrained_model \
-  --seeds /tmp/grasp_part_dev.json \
-  --mode both --record-dir eval_runs/grasp_part \
-  --tokenizer-path /path/to/paligemma-3b-pt-224
+    def reset(self, task_id, instruction, action_dim):
+        ...  # clear action chunks / recurrent state
+
+    def act(self, state, images, instruction, step):
+        return action  # shape: (action_dim,)
 ```
 
-Repeat with `eval.eval_grasp_move_mug`, `eval.eval_toggle_switch`, `eval.eval_put_blocks`, `eval.eval_insert_letter` and the matching configs under `eval/configs/`. Details: [eval/README.md](eval/README.md).
+See `submission/pi0_policy_server.py` for a complete runnable π0 example.
+
+Generate local dev seeds for debugging:
+
+```bash
+python -m eval.select_eval_seeds --config eval/configs/toggle_switch_table.yaml \
+  --n-seeds 5 --rng-seed 42 --out /tmp/toggle_dev.json
+```
+
+Start your server, then point the evaluator to it:
+
+```bash
+# Your policy
+python submission/policy_server.py --port 8080 &
+
+# Or the complete π0 example, to test the full evaluation pipeline
+python submission/pi0_policy_server.py --port 8080 \
+  --ckpt outputs/pi0_toggle_mixed/checkpoints/030000/pretrained_model \
+  --tokenizer-path /path/to/paligemma-3b-pt-224 &
+
+python -m eval.eval_toggle_switch \
+  --policy-url http://127.0.0.1:8080 \
+  --seeds /tmp/toggle_dev.json --mode both \
+  --record-dir eval_runs/toggle
+```
+
+Repeat with `eval.eval_grasp_part`, `eval.eval_grasp_move_mug`, `eval.eval_put_blocks`, or `eval.eval_insert_letter` and the matching config. Details: [eval/README.md](eval/README.md).
 
 ### 4. Record expert demos (optional)
 
