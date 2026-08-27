@@ -16,16 +16,6 @@ This document describes the **public competition release** of MetaFine: five man
 
 Full sensor settings, success criteria, and baseline scores: [eval/README.md](eval/README.md).
 
-## What this repo contains
-
-| Included | Not included |
-|---|---|
-| Simulation environments, skills, predicates | **Official eval seeds** |
-| `eval/` harness (Perception + Understanding + Behavior) | Policy checkpoints (participants train their own) |
-| Competition assets (`3558`, `8848`, `100920`, `table.glb`) | Full CoRL demo HDF5 / LeRobot trees (download separately) |
-| Task-graph YAMLs for T2 | Internal cluster logs / operational scripts |
-| π0 baseline **reports** (`eval_runs/*/metafine_report.json`) | Evaluation videos from organizer runs |
-
 ## Downloads
 
 ### Training data (CoRL mixed demos)
@@ -112,33 +102,20 @@ python -m eval.eval_toggle_switch \
 
 Use `eval.eval_grasp_part`, `eval.eval_grasp_move_mug`, `eval.eval_put_blocks`, or `eval.eval_insert_letter` for the other tasks. Add `--save-video` where supported; for `put_blocks`, use `tools/record_video.py`.
 
-## Seeds — critical policy
-
-**Official competition evaluation uses hidden seeds that are never published.**
-
-Why:
-
-- `select_eval_seeds.py` is **deterministic** for a given `--rng-seed`.
-- Training demo JSONs list all training `episode_seed` values (public).
-- Given the script, configs, and a known `--rng-seed`, anyone could reconstruct the official seed list.
-
-Therefore:
-
-| Party | Seeds |
-|---|---|
-| Organizers | Private list from a **secret** `--rng-seed`; stored only on evaluation servers |
-| Participants | Generate **local dev seeds** for debugging (`--rng-seed 42` in docs is an example only) |
-
-Your locally generated seeds **will not** match the official hidden set. This is expected.
-
 ## Submission
 
-Final submission format and upload portal will be announced on the [competition page](https://robofinemani2026.github.io/competition.html). Expected deliverables:
+Daily submissions run through **Hugging Face**. Each team creates one **private** model repo under its own account and adds the organizer account as a **read collaborator** (repo page → Settings → Collaborators). Keep an eye on the **contact email you registered with**: after registration we will email you the organizer HF account name to invite, and collect your repo id there. Never send access tokens — the collaborator invite is all we need.
 
-- Trained policy checkpoint(s) per task or a single multi-task checkpoint.
-- Optional: self-reported local eval logs on **your own** dev seeds (not used for official ranking).
+Your repo must contain:
 
-Organizers re-run submitted checkpoints on the **hidden seed set** with the shipped `eval/eval_*.py` scripts.
+- **`policy_server.py`** — the template from [`submission/policy_server.py`](submission/policy_server.py) with the `Policy` class implemented (`reset` / `act`); leave the protocol plumbing unchanged. Verify with `python policy_server.py --self-test` and a local `--policy-url` eval run before pushing (see [Evaluation protocol](#evaluation-protocol)).
+- **Weights** — any size, any architecture; ordinary files in the repo.
+- **`requirements.txt`** — extra dependencies, installed on top of the official evaluation base image.
+- **`metadata.json`** — team name, contact email, and the `"evaluate"` flag described below.
+
+**To keep official evaluation running smoothly, always make sure the full local evaluation passes on your machine before you upload.**
+
+We snapshot every registered repo **twice a day, at 02:00 and 14:00 UTC**. A snapshot enters the evaluation queue only when **both** conditions hold: (a) the model/code content changed since your last evaluated version, and (b) `metadata.json` sets `"evaluate": true`. A content change with `"evaluate": false` is **not** evaluated; flipping `"evaluate"` to `true` without a content change is likewise **not** evaluated for now. So: push your update before a cutoff with the flag set to `true`, and nothing else is required. Official evaluation runs your policy server against the **hidden seed set** with the same `eval/eval_*.py` harness shipped in this repo.
 
 ## Experimental environments
 
