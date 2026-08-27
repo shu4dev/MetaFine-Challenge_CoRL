@@ -168,6 +168,20 @@ lerobot-train \
 
 Evaluation uses the unified `policy-server` interface. Customize `Policy` in `submission/policy_server.py`: load weights once in `__init__`, clear per-episode state in `reset`, and return one action from `act`. Leave the protocol plumbing unchanged.
 
+```text
+┌──────────────────────────────────────┐                       ┌──────────────────────────────────────────┐
+│ Server · Participant container       │    localhost HTTP     │ Eval · Evaluation environment            │
+│                                      │                       │                                          │
+│ submission/policy_server.py          │◀── GET /health ──────│ eval/eval_*.py                           │
+│ ├─ __init__: load model once         │◀── POST /reset ──────│ ├─ SAPIEN simulator + hidden seeds       │
+│ ├─ reset: clear episode state        │    once per episode   │ ├─ task + instruction + action_dim       │
+│ └─ act: run policy inference         │◀── POST /act ────────│ ├─ robot state + dual RGB + instruction  │
+│    └─ policy / foundation model      │    every control step │ ├─ env.step(action)                      │
+│                                      │── action[action_dim] ─▶│ └─ Understanding / Perception / Behavior │
+│                                      │                       │    scoring + JSON reports                 │
+└──────────────────────────────────────┘                       └──────────────────────────────────────────┘
+```
+
 ```python
 class Policy:
     def __init__(self):
