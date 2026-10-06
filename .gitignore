@@ -16,10 +16,12 @@ __pycache__/
 .env.*
 
 # Local data / scratch (download demos & checkpoints outside git)
-demos/CoRL/*/lerobot/
+#   HF layout: demos/CoRL/<task>/<variant>/{lerobot/,raw/,*.h5,*.json}
+demos/CoRL/*/*/
 demos/CoRL/*/*.h5
 demos/CoRL/*/*.json
-demos/CoRL/*/raw/
+demos/CoRL/.cache/
+demos/CoRL/.gitattributes
 outputs/
 logs/
 eval_runs/*/videos/
