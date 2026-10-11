@@ -52,3 +52,12 @@ core/policies/*/eval_videos/
 
 # Comparison PDFs from tools/make_report.py (shared directly, not via git)
 reports/
+
+# Experiments: keep code and job lists, not datasets, runs, models or logs
+gmm_test/**
+!gmm_test/**/
+!gmm_test/**/*.py
+!gmm_test/**/*.sh
+!gmm_test/**/jobs*.txt
+!gmm_test/paired/check_jobs.txt
+!gmm_test/prompt_test/*.yaml
