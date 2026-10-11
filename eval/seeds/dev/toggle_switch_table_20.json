@@ -1,0 +1,38 @@
+{
+  "seeds": [
+    885440,
+    403958,
+    794772,
+    933488,
+    441001,
+    42450,
+    271493,
+    536110,
+    509532,
+    424604,
+    962838,
+    821872,
+    318046,
+    499748,
+    375441,
+    611720,
+    934973,
+    952225,
+    229053,
+    146039
+  ],
+  "meta": {
+    "task_id": "toggle_switch_table",
+    "env_id": "toggle_switch_table",
+    "config": "/home/lab250-4/MetaFine-Challenge_CoRL/eval/configs/toggle_switch_table.yaml",
+    "n_seeds": 20,
+    "rng_seed": 0,
+    "train_seed_pool_size": 199,
+    "check_variants": [
+      "red",
+      "blue"
+    ],
+    "require_all_variants": true,
+    "disjoint_from_train": true
+  }
+}

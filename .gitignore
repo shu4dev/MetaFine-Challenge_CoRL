@@ -49,3 +49,6 @@ core/policies/*/eval_videos/
 *.ckpt
 *.onnx
 *.pt
+
+# Comparison PDFs from tools/make_report.py (shared directly, not via git)
+reports/
