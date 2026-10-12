@@ -20,6 +20,7 @@ Example::
         --seeds eval/seeds/dev/toggle_switch_table_20.json --mode both
 
 ``--n-action-steps N`` makes pi0 replan every N actions instead of the checkpoint's value.
+``--guidance W`` adds contrastive instruction guidance (tools/guidance.py).
 Any argument not listed below is passed through to the official eval script
 (e.g. ``--n-seeds 5``, ``--torch-seed 0``, ``--save-video``).
 """
@@ -179,6 +180,10 @@ def main() -> None:
     p.add_argument("--n-action-steps", type=int, default=None,
                    help="replan every N actions instead of the checkpoint's n_action_steps "
                         "(pi0 default 50); --policy-path only")
+    p.add_argument("--guidance", type=float, default=None,
+                   help="contrastive instruction guidance weight w (tools/guidance.py); --policy-path only")
+    p.add_argument("--guidance-swap", default="red,blue",
+                   help="the two words swapped to make the negative instruction")
     p.add_argument("--runs-dir", default="runs")
     p.add_argument("--note", default="", help="free-text note stored in run.json")
     args, passthrough = p.parse_known_args()
@@ -203,6 +208,7 @@ def main() -> None:
         "policy": {"path": args.policy_path, "url": args.policy_url},
         "config_file": str(config_path),
         "n_action_steps": args.n_action_steps,
+        "guidance": args.guidance, "guidance_swap": args.guidance_swap if args.guidance is not None else None,
         "seeds_file": str(args.seeds),
         "eval_passthrough_args": passthrough,
         "command": " ".join([sys.executable, *sys.argv]),
@@ -216,18 +222,22 @@ def main() -> None:
     module = importlib.import_module(TASK_MODULES[args.task])
     recorder = TrajectoryRecorder(module.run_episode, run_dir / "episodes")
     module.run_episode = recorder
-    if args.n_action_steps is not None:
+    if args.n_action_steps is not None or args.guidance is not None:
         if not args.policy_path:
-            raise SystemExit("--n-action-steps needs --policy-path")
+            raise SystemExit("--n-action-steps / --guidance need --policy-path")
         load = module.load_pi0_policy
 
-        def load_with_n_action_steps(*a, **kw):
+        def load_with_overrides(*a, **kw):
             policy, pre, post = load(*a, **kw)
-            policy.config.n_action_steps = args.n_action_steps
-            policy.reset()  # rebuild the action queue with the new length
+            if args.n_action_steps is not None:
+                policy.config.n_action_steps = args.n_action_steps
+                policy.reset()  # rebuild the action queue with the new length
+            if args.guidance is not None:
+                from tools.guidance import enable_guidance
+                enable_guidance(policy, pre, args.guidance, tuple(args.guidance_swap.split(",")))
             return policy, pre, post
 
-        module.load_pi0_policy = load_with_n_action_steps
+        module.load_pi0_policy = load_with_overrides
 
     policy_args = (["--policy-path", args.policy_path] if args.policy_path
                    else ["--policy-url", args.policy_url])
