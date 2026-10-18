@@ -9,19 +9,20 @@ D=$REPO/gmm_test/color_mask
 LOG=$D/run_mask_test.log
 SEEDS=$REPO/eval/seeds/dev/toggle_switch_table_100.json
 START=$REPO/outputs/smooth_demos_more/checkpoints/002000/merged_model   # smooth 4k, full weights
-DATA=$REPO/gmm_test/smooth_demos/lerobot_smooth
+DATA=${DATA:-$REPO/gmm_test/smooth_demos/lerobot_smooth}
+TAG=${TAG:-smooth4k}   # e.g. DATA=.../lerobot_smooth_paired TAG=paired4k ARMS=mask
 source ~/venvs/metafine/env.sh
 cd "$REPO"
 [ -d "$START" ] || { echo "== missing $START" >> "$LOG"; exit 1; }
 
-for ARM in mask nomask; do
-  NAME=smooth4k_$ARM
+for ARM in ${ARMS:-mask nomask}; do
+  NAME=${TAG}_$ARM
   OUT=$REPO/outputs/$NAME
   if [ $ARM = mask ]; then TRAIN="python $D/train_mask.py"; EVAL=--target-mask; else TRAIN=lerobot-train; EVAL=; fi
   echo "== $(date) training $NAME" >> "$LOG"
   $TRAIN \
     --policy.path="$START" \
-    --dataset.repo_id=lerobot_smooth --dataset.root="$DATA" --dataset.video_backend=pyav \
+    --dataset.repo_id=$(basename "$DATA") --dataset.root="$DATA" --dataset.video_backend=pyav \
     --output_dir="$OUT" --job_name="$NAME" --steps=6000 --batch_size=4 --num_workers=8 --seed=1000 \
     --save_freq=2000 --log_freq=100 --policy.push_to_hub=false --policy.device=cuda \
     --policy.gradient_checkpointing=true --policy.dtype=bfloat16 --policy.train_expert_only=false \
@@ -37,7 +38,7 @@ for ARM in mask nomask; do
       || { echo "== merge failed $NAME $S" >> "$LOG"; continue; }
     python tools/run_eval.py --task toggle_switch_table --policy-path "$CK/merged_model" $EVAL \
         --seeds "$SEEDS" --mode understanding --torch-seed 0 --n-action-steps 25 \
-        --note "$NAME step $S: smooth 4k + fresh LoRA $((10#$S)) steps on smooth demos ($ARM); 100 dev seeds, replan 25" 2>&1 \
+        --note "$NAME step $S: smooth 4k + fresh LoRA $((10#$S)) steps on $(basename "$DATA") ($ARM); 100 dev seeds, replan 25" 2>&1 \
         | grep -E "SR=|per-variant|confusion|run folder" >> "$LOG"
     echo "RUN $NAME $S $(ls -d "$REPO"/runs/*/ | sort | tail -1)" >> "$LOG"
     rm -rf "$CK/merged_model"
