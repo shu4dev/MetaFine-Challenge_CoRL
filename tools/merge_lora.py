@@ -25,6 +25,8 @@ def merge(adapter_dir: Path, out_dir: Path) -> Path:
     from peft import PeftModel
 
     base = json.loads((adapter_dir / "adapter_config.json").read_text())["base_model_name_or_path"]
+    if not Path(base).is_dir():  # from_pretrained would silently return an untrained model
+        raise FileNotFoundError(f"base model {base} not found; recreate it before merging")
     cfg = PreTrainedConfig.from_pretrained(adapter_dir)
     cfg.use_peft = False
     cfg.device = "cpu"
