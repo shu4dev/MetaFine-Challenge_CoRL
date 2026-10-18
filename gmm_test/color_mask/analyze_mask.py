@@ -61,7 +61,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.backends.backend_pdf import PdfPages  # noqa: E402
 
-mask_runs = [k for k in RUNS if "mask" in k and "nomask" not in k]
+mask_runs = [k for k in RUNS if ("mask" in k or "offset" in k) and "nomask" not in k]  # runs given a hint
 order = ([max(mask_runs, key=lambda k: E[k].success.mean())] if mask_runs else []) + \
         [k for k in RUNS if k not in mask_runs[:0]]
 runs = {k: MR.Run(REPO / "runs" / r, i) for i, (k, r) in enumerate(RUNS.items())}
@@ -83,7 +83,8 @@ with PdfPages(out) as pdf:
             "target view (tools/target_mask.py: 48 px crop of the first base-camera frame around the switch, "
             "green dot on the instructed slider, 224 px) in pi0's third image slot, at train and test time. "
             "'nomask +N': same training without the view (control for 'more training'). 'paired mask +N': with the "
-            "view, on demos where each scene has both colours (379 demos, 179 scenes with both). Smoothness compares "
+            "view, on demos where each scene has both colours (379 demos, 179 scenes with both). 'paired offset +N': no view; "
+            "instead the instructed-minus-other slider pixel offset (/10) is appended to the state. Smoothness compares "
             "only scenes both models solved. Success also counts 'both' (pressing both sliders), so 'right only' "
             "is the real test of picking the colour.")
     fig.text(0.05, 0.33, "\n".join(textwrap.wrap(note, 130)), va="top", fontsize=9.5)
@@ -94,8 +95,9 @@ with PdfPages(out) as pdf:
     MR.page_summary(pdf, list(runs.values()))
     MR.page_task(pdf, "T3", "toggle_switch_table", list(runs.values()))
     MR.page_motion(pdf, "T3", "toggle_switch_table", list(runs.values()))
-if "mask +6000" in E and "nomask +6000" in E:  # the fair comparison: same training, with vs without the view
-    a, b = E["nomask +6000"].right, E["mask +6000"].right.loc[E["nomask +6000"].index]
-    g, l = int((~a & b).sum()), int((a & ~b).sum())
-    print(f"right-only, mask +6000 vs nomask +6000: +{g}/-{l} p={binomtest(g, g + l).pvalue:.3f}")
+for x, c in [("mask", "nomask"), ("paired mask", "paired nomask"), ("paired offset", "paired nomask")]:
+    if f"{x} +6000" in E and f"{c} +6000" in E:  # the fair comparison: same training, with vs without the hint
+        a, b = E[f"{c} +6000"].right, E[f"{x} +6000"].right.loc[E[f"{c} +6000"].index]
+        g, l = int((~a & b).sum()), int((a & ~b).sum())
+        print(f"right-only, {x} +6000 vs {c} +6000: +{g}/-{l} p={binomtest(g, g + l).pvalue:.3f}")
 print("wrote", out)

@@ -18,7 +18,11 @@ cd "$REPO"
 for ARM in ${ARMS:-mask nomask}; do
   NAME=${TAG}_$ARM
   OUT=$REPO/outputs/$NAME
-  if [ $ARM = mask ]; then TRAIN="python $D/train_mask.py"; EVAL=--target-mask; else TRAIN=lerobot-train; EVAL=; fi
+  case $ARM in   # offset: the target-minus-other pixel offset appended to the state (no view)
+    mask) TRAIN="python $D/train_mask.py"; EVAL=--target-mask; export TARGET_HINT=view ;;
+    offset) TRAIN="python $D/train_mask.py"; EVAL=--target-offset; export TARGET_HINT=offset ;;
+    *) TRAIN=lerobot-train; EVAL= ;;
+  esac
   echo "== $(date) training $NAME" >> "$LOG"
   $TRAIN \
     --policy.path="$START" \

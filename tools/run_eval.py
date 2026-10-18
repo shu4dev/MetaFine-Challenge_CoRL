@@ -21,7 +21,8 @@ Example::
 
 ``--n-action-steps N`` makes pi0 replan every N actions instead of the checkpoint's value.
 ``--guidance W`` adds contrastive instruction guidance (tools/guidance.py).
-``--target-mask`` feeds the T3 target view (tools/target_mask.py) into pi0's third image slot.
+``--target-mask`` feeds the T3 target view (tools/target_mask.py) into pi0's third image slot;
+``--target-offset`` appends the target-minus-other slider pixel offset to the state instead/as well.
 Any argument not listed below is passed through to the official eval script
 (e.g. ``--n-seeds 5``, ``--torch-seed 0``, ``--save-video``).
 """
@@ -187,6 +188,8 @@ def main() -> None:
                    help="the two words swapped to make the negative instruction")
     p.add_argument("--target-mask", action="store_true",
                    help="T3 target view in the third image slot (tools/target_mask.py); --policy-path only")
+    p.add_argument("--target-offset", action="store_true",
+                   help="T3 target-minus-other slider pixel offset appended to the state (tools/target_mask.py)")
     p.add_argument("--runs-dir", default="runs")
     p.add_argument("--note", default="", help="free-text note stored in run.json")
     args, passthrough = p.parse_known_args()
@@ -212,7 +215,7 @@ def main() -> None:
         "config_file": str(config_path),
         "n_action_steps": args.n_action_steps,
         "guidance": args.guidance, "guidance_swap": args.guidance_swap if args.guidance is not None else None,
-        "target_mask": args.target_mask,
+        "target_mask": args.target_mask, "target_offset": args.target_offset,
         "seeds_file": str(args.seeds),
         "eval_passthrough_args": passthrough,
         "command": " ".join([sys.executable, *sys.argv]),
@@ -226,9 +229,9 @@ def main() -> None:
     module = importlib.import_module(TASK_MODULES[args.task])
     recorder = TrajectoryRecorder(module.run_episode, run_dir / "episodes")
     module.run_episode = recorder
-    if args.n_action_steps is not None or args.guidance is not None or args.target_mask:
+    if args.n_action_steps is not None or args.guidance is not None or args.target_mask or args.target_offset:
         if not args.policy_path:
-            raise SystemExit("--n-action-steps / --guidance / --target-mask need --policy-path")
+            raise SystemExit("--n-action-steps / --guidance / --target-mask / --target-offset need --policy-path")
         load = module.load_pi0_policy
 
         def load_with_overrides(*a, **kw):
@@ -239,9 +242,9 @@ def main() -> None:
             if args.guidance is not None:
                 from tools.guidance import enable_guidance
                 enable_guidance(policy, pre, args.guidance, tuple(args.guidance_swap.split(",")))
-            if args.target_mask:
+            if args.target_mask or args.target_offset:
                 from tools.target_mask import enable_target_mask
-                enable_target_mask(policy)
+                enable_target_mask(policy, view=args.target_mask, offset=args.target_offset)
             return policy, pre, post
 
         module.load_pi0_policy = load_with_overrides
