@@ -1,0 +1,9 @@
+# Tier A (any laptop, incl. macOS and Windows; no GPU, no simulator):
+# enough for tests/test_smoke.py, tools/check_demos.py and offline analysis.
+#   pip install -r requirements/tier-a.txt
+# Versions match requirements/lock-linux-cu124.txt.
+numpy==1.26.4
+torch==2.6.0
+pyyaml==6.0.3
+pyarrow==25.0.1
+pytest==9.1.1
