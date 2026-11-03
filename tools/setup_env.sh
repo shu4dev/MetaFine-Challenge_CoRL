@@ -37,11 +37,17 @@ conda env config vars set -n "$ENV_NAME" PYTHONNOUSERSITE=1 >/dev/null
 conda activate "$ENV_NAME"
 
 echo "==> Installing the locked package set (no resolver)"
-python -m pip install -q --no-deps -r "$LOCK" --extra-index-url "$TORCH_INDEX"
+LOCK_USED="$LOCK"
+if ! command -v gcc >/dev/null 2>&1; then
+  # evdev (lerobot teleop only) ships source only and needs a compiler; leave it out on such machines
+  LOCK_USED="$(mktemp)"; grep -v -i "^evdev" "$LOCK" > "$LOCK_USED"
+  echo "==> no gcc found: installing the lock without evdev (pip check will note that pynput wants it)"
+fi
+python -m pip install -q --no-deps -r "$LOCK_USED" --extra-index-url "$TORCH_INDEX"
 python -m pip install -q --no-deps -e "$REPO_ROOT"
 
 echo "==> pip check (one rerun-sdk/numpy note is expected)"
-unexpected="$(python -m pip check 2>&1 | grep -v -E '^rerun-sdk .* numpy>=2' || true)"
+unexpected="$(python -m pip check 2>&1 | grep -v -E '^rerun-sdk .* numpy>=2|^pynput .* evdev' || true)"
 if [[ -n "$unexpected" && "$unexpected" != "No broken requirements found." ]]; then
   echo "$unexpected" >&2
   exit 1

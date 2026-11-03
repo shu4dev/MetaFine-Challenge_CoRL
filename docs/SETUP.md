@@ -17,6 +17,7 @@ and checks the result. Issue: #10 [C0.1].
 | Member | Tier | GPU | Env | Freeze |
 |---|---|---|---|---|
 | Dongheon97 | B, C (D pending #12) | RTX 3090 24 GB, driver 580.178.04, Ubuntu 22.04 | conda `cs593` | [`freeze/dongheon97-rtx3090.txt`](freeze/dongheon97-rtx3090.txt) |
+| shu4dev | C, D | L40S 48 GB (Brev rental `cs593-4090`, Nov 2026), driver 580.126.09 | conda `cs593` | [`freeze/shu4dev-l40s-brev.txt`](freeze/shu4dev-l40s-brev.txt) |
 
 Add one row and one `docs/freeze/<github-user>-<gpu>.txt` (`pip freeze --exclude-editable`) per machine.
 
@@ -25,13 +26,15 @@ Revisions in use (record yours if they differ):
 | Artifact | Hugging Face id | Revision |
 |---|---|---|
 | Demos | [`hiangx/MetaFine_CoRL26`](https://huggingface.co/datasets/hiangx/MetaFine_CoRL26) (dataset) | `0e86f4a420cde600324a64568949489ac31b11c7` |
-| pi0 base | [`lerobot/pi0_base`](https://huggingface.co/lerobot/pi0_base) | `25c379b52ba2ff8788cab921758a3cc3fe3f77f2` |
+| pi0 base | [`lerobot/pi0_base`](https://huggingface.co/lerobot/pi0_base) | `26b99b9439acb1e352439e34ee9c67af0d76efa3` (the seed-1000 run's; `25c379b5` and `main` hold the same weights file and only add a disabled `relative_actions_processor` step to `policy_preprocessor.json`) |
 | Tokenizer | [`google/paligemma-3b-pt-224`](https://huggingface.co/google/paligemma-3b-pt-224) (gated) | `35e4f46485b4d07967e7e9935bc3786aad50687c` |
 
 ## Install
 
 Reference versions (README.md, Installation): Python 3.10, torch 2.6 (cu124),
-lerobot 0.4.4, transformers 4.57.0, sapien 3.0.3, mani_skill 3.0.1, numpy 1.26.4.
+lerobot 0.4.4, sapien 3.0.3, mani_skill 3.0.1, numpy 1.26.4, and for transformers the fork
+lerobot's `pi` extra pins (`fix/lerobot_openpi`, commit `dcddb970`, reports 4.53.3) with tokenizers 0.21.4;
+the README's transformers 4.57.0 imports but pi0 training refuses it (see the pitfalls).
 
 ### Quick install (Linux x86_64, tier B to D)
 
@@ -75,8 +78,9 @@ conda activate cs593
 # 1. simulator
 pip install "sapien==3.0.3" "mani_skill==3.0.1"
 # 2. pi0 stack on CUDA 12.4 wheels
-pip install "torch==2.6.0" "lerobot==0.4.4" "transformers==4.57.0" \
-    --extra-index-url https://download.pytorch.org/whl/cu124
+pip install "torch==2.6.0" "lerobot==0.4.4" --extra-index-url https://download.pytorch.org/whl/cu124
+pip install --no-deps "transformers @ git+https://github.com/huggingface/transformers.git@dcddb970176382c0fcf4521b0c0e6fc15894dfe0" \
+    "tokenizers==0.21.4"      # lerobot's pi extra; pi0 needs this fork, not PyPI transformers
 # 3. this repo (dependencies are already in place)
 pip install --no-deps -e . "pytest>=7.0" iniconfig pluggy
 # 4. versions the baseline was run with
@@ -86,8 +90,7 @@ pip install --no-deps "numpy==1.26.4" "opencv-python==4.11.0.86" \
 
 `pip check` then reports only `rerun-sdk 0.26.2 has requirement numpy>=2`.
 rerun is lerobot's visualizer; training, dataset loading and evaluation do not use it.
-pip also warns that transformers 4.57.0 is yanked on PyPI; it is the README's reference
-version and installs and runs fine here.
+The lock installs transformers from lerobot's fork (a git URL), so pip needs `git`; building it takes a minute.
 
 Verify (tier B and up):
 
@@ -100,6 +103,15 @@ python -c "import core.env, core.skill; import gymnasium as gym; \
 
 ### Known pitfalls
 
+- **pi0 refuses PyPI transformers.** With transformers 4.57.0 (the README's number, and in the lock until
+  Nov 2, 2026) `lerobot-train` stops at policy creation with `An incorrect transformer version is used`:
+  lerobot 0.4.4's pi0 checks for the patched models of its `pi` extra. The lock now pins that fork
+  (`fix/lerobot_openpi` at commit `dcddb970`, version 4.53.3) and tokenizers 0.21.4. On an env that
+  already has 4.57.0: `pip install --no-deps "transformers @ git+https://github.com/huggingface/transformers.git@dcddb970176382c0fcf4521b0c0e6fc15894dfe0" "tokenizers==0.21.4"`.
+  Loading `lerobot/pi0_base` then warns about one missing key, the tied `embed_tokens` weight; that is expected.
+- **`evdev` needs a compiler.** `evdev` (lerobot teleop only) is source-only. On a machine without `gcc` and
+  without sudo, `tools/setup_env.sh` installs the lock without it; `pip check` then notes that `pynput`
+  wants it, which training and evaluation never touch.
 - **Video backend.** Always pass `--dataset.video_backend=pyav` to `lerobot-train`, as the README does.
   torchcodec 0.2.1 is the release built for torch 2.6, but lerobot 0.4.4 hands it a file object it
   cannot open (`TypeError: Unknown source type`). Newer torchcodec releases fail to load against torch 2.6

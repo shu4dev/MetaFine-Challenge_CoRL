@@ -140,7 +140,7 @@ stack-data==0.6.3
 sympy==1.13.1
 tabulate==0.10.0
 termcolor==3.3.0
-tokenizers==0.22.2
+tokenizers==0.21.4  # the fork above needs <0.22
 toml==0.10.2
 tomli==2.4.1
 toppra==0.6.10
@@ -149,7 +149,7 @@ TorchCodec==0.2.1
 torchvision==0.21.0+cu124
 tqdm==4.70.1
 traitlets==5.16.1
-transformers==4.57.0
+transformers @ git+https://github.com/huggingface/transformers.git@dcddb970176382c0fcf4521b0c0e6fc15894dfe0  # lerobot 0.4.4 pi extra (fix/lerobot_openpi, reports 4.53.3); pi0 refuses PyPI 4.57.0
 transforms3d==0.4.2
 trimesh==5.1.1
 triton==3.2.0
