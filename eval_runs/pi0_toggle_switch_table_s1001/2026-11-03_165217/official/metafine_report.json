@@ -1,0 +1,31 @@
+{
+  "task_id": "toggle_switch_table",
+  "metrics": {
+    "understanding": {
+      "success_rate": 0.535,
+      "per_variant_success_rate": {
+        "red": 0.6,
+        "blue": 0.47
+      },
+      "confusion": {
+        "red": {
+          "blue": 26,
+          "none": 10,
+          "both": 32,
+          "red": 32
+        },
+        "blue": {
+          "blue": 21,
+          "both": 31,
+          "red": 37,
+          "none": 11
+        }
+      }
+    },
+    "behavior": {
+      "success_rate": 0.535,
+      "mean_stage_fraction": null,
+      "note": "single-stage task: Behavior = final success rate"
+    }
+  }
+}

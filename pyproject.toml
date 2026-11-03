@@ -44,7 +44,7 @@ dependencies = [
     "transforms3d>=0.4",
     "opencv-python>=4.7",
     "pyyaml>=6.0",
-    "transformers>=4.57,<4.58",
+    "transformers>=4.53,<4.58",
     "Pillow>=9.0",
 ]
 

@@ -1,0 +1,60 @@
+{
+  "status": "done",
+  "task_id": "toggle_switch_table",
+  "mode": "understanding",
+  "policy": {
+    "path": "outputs/pi0_toggle_switch_table_s1002/checkpoints/020000/merged_model",
+    "url": null
+  },
+  "config_file": "/home/shadeform/MetaFine-Challenge_CoRL/eval/configs/toggle_switch_table.yaml",
+  "n_action_steps": 25,
+  "guidance": null,
+  "guidance_swap": null,
+  "target_mask": false,
+  "target_offset": false,
+  "seeds_file": "eval/seeds/dev/toggle_switch_table_100.json",
+  "eval_passthrough_args": [
+    "--torch-seed",
+    "0",
+    "--tokenizer-path",
+    "/home/shadeform/models/paligemma-3b-pt-224"
+  ],
+  "command": "/home/shadeform/miniforge3/envs/cs593/bin/python tools/run_eval.py --task toggle_switch_table --policy-path outputs/pi0_toggle_switch_table_s1002/checkpoints/020000/merged_model --seeds eval/seeds/dev/toggle_switch_table_100.json --mode understanding --n-action-steps 25 --torch-seed 0 --runs-dir eval_runs/pi0_toggle_switch_table_s1002 --note pi0_toggle_switch_table_s1002 step 20000 (LoRA whole model, one run), replan every 25 --tokenizer-path /home/shadeform/models/paligemma-3b-pt-224",
+  "git": {
+    "commit": "280f0e6dd3e0e637b57e5997e5c5e8820febeb39",
+    "dirty": true
+  },
+  "note": "pi0_toggle_switch_table_s1002 step 20000 (LoRA whole model, one run), replan every 25",
+  "started_utc": "2026-11-03T08:59:12+00:00",
+  "n_episodes": 200,
+  "dt": 0.05,
+  "metrics": {
+    "understanding": {
+      "success_rate": 0.545,
+      "per_variant_success_rate": {
+        "red": 0.56,
+        "blue": 0.53
+      },
+      "confusion": {
+        "red": {
+          "both": 38,
+          "blue": 22,
+          "red": 24,
+          "none": 16
+        },
+        "blue": {
+          "both": 25,
+          "blue": 35,
+          "red": 28,
+          "none": 12
+        }
+      }
+    },
+    "behavior": {
+      "success_rate": 0.545,
+      "mean_stage_fraction": null,
+      "note": "single-stage task: Behavior = final success rate"
+    }
+  },
+  "finished_utc": "2026-11-03T09:18:13+00:00"
+}
